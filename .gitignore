@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional: Test/experimental files (uncomment if you don't want to track these)
+# test_*.js
+# test_*.html
+# *_test_results.txt
+# *_experiments.html
+

@@ -1,0 +1,386 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    WORD BANK STRUCTURE GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+OVERVIEW
+────────
+Your word bank generates exactly 25 words per bank. The structure consists of
+three main components:
+
+1. BASIC WORDS (8-10 words randomly selected - dynamically generated)
+2. EMOTION-BASED WORDS (generated from emotion's parts of speech)
+3. RANDOM FILLER WORDS (to reach 25 total)
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 1: BASIC WORDS (DYNAMIC GENERATION)
+═══════════════════════════════════════════════════════════════════════════════
+
+Basic words are GENERATED DYNAMICALLY using RiTa.randomWord({ pos }) with
+Penn part-of-speech tags. This means each word bank generation may have
+different basic words, but they will always cover essential grammatical
+categories.
+
+HOW IT WORKS:
+1. The generateBasicWords() function is called for each word bank
+2. Words are generated using RiTa.randomWord({ pos }) for each POS category
+3. Important categories get multiple word attempts for variety
+4. Fallback generation ensures we have enough words
+5. 8-10 words are randomly selected from the generated basic words
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ BASIC WORD CATEGORIES (Penn POS Tags)                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+
+The basic words are generated from these Penn POS tag categories:
+
+PRONOUNS
+  - prp  = Personal pronoun (e.g., "i", "you", "he", "she", "it", "we", "they")
+  - prp$ = Possessive pronoun (e.g., "my", "your", "his", "her", "its", "our", "their")
+
+COORDINATING CONJUNCTIONS
+  - cc   = Coordinating conjunction (e.g., "and", "or", "but")
+
+DETERMINERS
+  - dt   = Determiner (e.g., "the", "a", "an", "this", "that", "these", "those")
+  - pdt  = Predeterminer (e.g., "all", "both", "half")
+
+PREPOSITIONS
+  - in   = Preposition or subordinating conjunction (e.g., "of", "to", "in", "on",
+           "at", "for", "with", "from", "as", "if", "when", "where")
+
+VERBS (Various Forms)
+  - vb   = Verb, base form (e.g., "be", "have", "do")
+  - vbd  = Verb, past tense (e.g., "was", "were", "had", "did")
+  - vbg  = Verb, gerund or present participle (e.g., "being", "having")
+  - vbn  = Verb, past participle (e.g., "been", "had")
+  - vbp  = Verb, non-3rd person singular present (e.g., "are", "have", "do")
+  - vbz  = Verb, 3rd person singular present (e.g., "is", "has", "does")
+
+WH-WORDS (Question Words)
+  - wdt  = Wh-determiner (e.g., "which", "what")
+  - wp   = Wh-pronoun (e.g., "who", "what", "which")
+  - wp$  = Possessive wh-pronoun (e.g., "whose")
+  - wrb  = Wh-adverb (e.g., "how", "why", "when", "where")
+
+ADVERBS
+  - rb   = Adverb (e.g., "not", "so", "than")
+
+MODAL VERBS
+  - md   = Modal (e.g., "can", "could", "will", "would", "should", "may", "might")
+
+PARTICLES
+  - rp   = Particle (e.g., "up", "off", "out")
+
+TO
+  - to   = "to" as preposition/infinitive marker
+
+═══════════════════════════════════════════════════════════════════════════════
+HOW TO EDIT BASIC WORDS
+═══════════════════════════════════════════════════════════════════════════════
+
+To modify the basic words generation, edit the generateBasicWords() function
+in rita.html (around line 314).
+
+OPTION 1: Modify POS Categories
+────────────────────────────────
+Edit the posCategories object to add/remove POS tags:
+
+EXAMPLE - Add more verb forms:
+  verbs: ["vb", "vbd", "vbg", "vbn", "vbp", "vbz", "vbg"],  // Add gerund
+
+EXAMPLE - Remove wh-words:
+  // Comment out or remove the whWords category
+
+OPTION 2: Modify Important Categories
+──────────────────────────────────────
+Edit the importantCategories object to change which categories get
+additional word generation attempts (default: 3 attempts per category):
+
+EXAMPLE - Increase pronoun variety:
+  pronouns: ["prp", "prp$"],  // Current
+  // Change attempts to 5 for more variety
+
+OPTION 3: Change Number of Attempts
+────────────────────────────────────
+Edit line 370 to change how many words are generated per important category:
+
+  const attempts = 5;  // Change from 3 to 5 for more variety
+
+OPTION 4: Modify Fallback POS Tags
+───────────────────────────────────
+Edit line 388 to change which POS tags are used as fallback if not enough
+words are generated:
+
+  const fallbackPos = ["dt", "prp", "cc", "in", "vb", "rb", "jj"];  // Add adjectives
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 2: EMOTION-BASED WORDS
+═══════════════════════════════════════════════════════════════════════════════
+
+These words are generated dynamically based on the parts of speech (POS) found
+in the user's emotion description.
+
+HOW IT WORKS:
+1. The emotion text is analyzed using RiTa.pos()
+2. Unique parts of speech are extracted (e.g., "nn" for noun, "jj" for adjective)
+3. For each unique POS, RiTa.randomWord({ pos }) generates a matching word
+4. These words are added to the bank
+
+EXAMPLE:
+  Emotion: "a quiet longing for something undefined"
+  POS found: ["dt", "jj", "nn", "in", "nn", "jj"]
+  → Generates random words matching those parts of speech
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 3: RANDOM FILLER WORDS
+═══════════════════════════════════════════════════════════════════════════════
+
+If the bank hasn't reached 25 words yet, it fills remaining slots with random
+words from these POS types:
+
+POS TYPES USED:
+  - "nn" = Noun
+  - "jj" = Adjective
+  - "vb" = Verb
+  - "rb" = Adverb
+  - "prp" = Preposition
+  - "dt" = Determiner
+
+CONSTRAINTS:
+  - Syllables: 1-3 (random)
+  - Generated using RiTa.randomWord()
+
+═══════════════════════════════════════════════════════════════════════════════
+HOW TO EDIT RANDOM FILLER WORDS
+═══════════════════════════════════════════════════════════════════════════════
+
+To modify which POS types are used for random words, edit the posTypes array
+in rita.html (around line 423).
+
+CURRENT:
+  const posTypes = ["nn", "jj", "vb", "rb", "prp", "dt"];
+
+AVAILABLE PENN POS TAGS (Full Reference)
+─────────────────────────────────────────
+Reference: https://rednoise.org/rita/reference/postags.html
+
+NOUNS:
+  - "nn"  = Noun, singular or mass
+  - "nns" = Noun, plural
+  - "nnp" = Proper noun, singular
+  - "nnps" = Proper noun, plural
+
+ADJECTIVES:
+  - "jj"  = Adjective
+  - "jjr" = Adjective, comparative
+  - "jjs" = Adjective, superlative
+
+VERBS:
+  - "vb"  = Verb, base form
+  - "vbd" = Verb, past tense
+  - "vbg" = Verb, gerund or present participle
+  - "vbn" = Verb, past participle
+  - "vbp" = Verb, non-3rd person singular present
+  - "vbz" = Verb, 3rd person singular present
+
+ADVERBS:
+  - "rb"  = Adverb
+  - "rbr" = Adverb, comparative
+  - "rbs" = Adverb, superlative
+
+DETERMINERS & PRONOUNS:
+  - "dt"  = Determiner
+  - "pdt" = Predeterminer
+  - "prp" = Personal pronoun
+  - "prp$" = Possessive pronoun
+
+CONJUNCTIONS & PREPOSITIONS:
+  - "cc"  = Coordinating conjunction
+  - "in"  = Preposition or subordinating conjunction
+  - "to"  = "to" as preposition/infinitive
+
+QUESTION WORDS:
+  - "wdt" = Wh-determiner
+  - "wp"  = Wh-pronoun
+  - "wp$" = Possessive wh-pronoun
+  - "wrb" = Wh-adverb
+
+OTHER:
+  - "md"  = Modal
+  - "rp"  = Particle
+  - "uh"  = Interjection
+  - "cd"  = Cardinal number
+  - "ex"  = Existential there
+  - "fw"  = Foreign word
+  - "ls"  = List item marker
+  - "pos" = Possessive ending
+  - "sym" = Symbol
+
+EXAMPLE - More poetic words only:
+  const posTypes = ["nn", "jj", "vb", "rb"];  // Remove determiners/prepositions
+
+EXAMPLE - Include verb variations:
+  const posTypes = ["nn", "jj", "vb", "vbd", "vbg", "rb"];
+
+═══════════════════════════════════════════════════════════════════════════════
+SECTION 4: WORD BANK GENERATION FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP-BY-STEP PROCESS:
+
+1. Initialize empty word bank (Set to prevent duplicates)
+
+2. Generate Basic Words Dynamically
+   a. Call generateBasicWords() function
+   b. Generate words for each POS category in posCategories
+   c. Generate additional words for importantCategories (3 attempts each)
+   d. If < 10 words generated, use fallback POS tags
+   e. Return array of basic words
+
+3. Add Basic Words to Bank (8-10 randomly selected)
+   - Shuffle generated basicWords array
+   - Select 8-10 words randomly (or available amount)
+   - Add to bank
+
+4. Add Emotion-Based Words
+   - Extract POS tags from emotion text using RiTa.pos()
+   - Filter out punctuation marks
+   - For each unique POS, generate random word using RiTa.randomWord({ pos })
+   - Add to bank (if not already present)
+
+5. Fill Remaining Slots
+   - While bank.size < 25:
+     a. Pick random POS from posTypes array
+     b. Generate word with 1-3 syllables using RiTa.randomWord()
+     c. Add to bank
+     d. If generation fails, try any random word
+     e. If that fails, add more basic words
+
+6. Finalize
+   - Convert Set to Array
+   - Sort alphabetically
+   - Return first 25 words
+
+═══════════════════════════════════════════════════════════════════════════════
+CUSTOMIZATION IDEAS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. CHANGE BASIC WORD COUNT
+   Current: 8-10 words
+   Edit line 427-431 in generateWordBank():
+     const basicCount = Math.min(
+       Math.floor(Math.random() * 3) + 5,  // Change 8 to 5 for 5-7 words
+       shuffledBasic.length,
+       25 - wordBank.size
+     );
+
+2. CHANGE TOTAL WORD BANK SIZE
+   Current: 25 words
+   Edit all instances of "25" in generateWordBank() function
+   Also update UI text that says "25 Words" in rita.html
+
+3. ADD NEW POS CATEGORIES TO BASIC WORDS
+   Edit posCategories object (line 320):
+     // Add new category
+     adjectives: ["jj", "jjr", "jjs"],
+
+4. CHANGE NUMBER OF ATTEMPTS PER IMPORTANT CATEGORY
+   Current: 3 attempts
+   Edit line 370:
+     const attempts = 5;  // Increase for more variety
+
+5. RESTRICT SYLLABLE COUNT FOR RANDOM WORDS
+   Current: 1-3 syllables
+   Edit line 459:
+     syllables: Math.floor(Math.random() * 3) + 2  // Change to 2-4 syllables
+
+6. ADD WORD LENGTH CONSTRAINTS
+   Add to RiTa.randomWord() options in generateBasicWords():
+     const word = RiTa.randomWord({ 
+       pos: randomPos,
+       minLength: 3,
+       maxLength: 8
+     });
+
+7. MODIFY FALLBACK THRESHOLD
+   Current: Fallback triggers if < 10 words
+   Edit line 387:
+     if (basicWords.size < 15) {  // Change threshold
+
+═══════════════════════════════════════════════════════════════════════════════
+QUICK REFERENCE: FILE LOCATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+rita.html:
+  - Line 314-402: generateBasicWords() function (edit basic word generation)
+  - Line 320-341: posCategories object (edit POS categories)
+  - Line 359-366: importantCategories object (edit important categories)
+  - Line 370: attempts constant (edit number of generation attempts)
+  - Line 387-399: fallback logic (edit fallback POS tags)
+  - Line 404-463: generateWordBank() function (main logic)
+  - Line 423: posTypes array (edit POS types for random words)
+  - Line 427-431: basicCount calculation (edit how many basic words to include)
+  - Line 459: syllables constraint (edit syllable count for random words)
+
+═══════════════════════════════════════════════════════════════════════════════
+PENN POS TAG REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+Full reference: https://rednoise.org/rita/reference/postags.html
+
+Tag  | Description
+-----|----------------------------------------------------
+cc   | Coordinating conjunction
+cd   | Cardinal number
+dt   | Determiner
+ex   | Existential there
+fw   | Foreign word
+in   | Preposition or subordinating conjunction
+jj   | Adjective
+jjr  | Adjective, comparative
+jjs  | Adjective, superlative
+ls   | List item marker
+md   | Modal
+nn   | Noun, singular or mass
+nns  | Noun, plural
+nnp  | Proper noun, singular
+nnps | Proper noun, plural
+pdt  | Predeterminer
+pos  | Possessive ending
+prp  | Personal pronoun
+prp$ | Possessive pronoun
+rb   | Adverb
+rbr  | Adverb, comparative
+rbs  | Adverb, superlative
+rp   | Particle
+sym  | Symbol
+to   | "to" as preposition/infinitive
+uh   | Interjection
+vb   | Verb, base form
+vbd  | Verb, past tense
+vbg  | Verb, gerund or present participle
+vbn  | Verb, past participle
+vbp  | Verb, non-3rd person singular present
+vbz  | Verb, 3rd person singular present
+wdt  | Wh-determiner
+wp   | Wh-pronoun
+wp$  | Possessive wh-pronoun
+wrb  | Wh-adverb
+
+═══════════════════════════════════════════════════════════════════════════════
+NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+- All words are converted to lowercase before adding to bank
+- Duplicates are automatically prevented (using Set)
+- Words are sorted alphabetically in final output
+- Basic words are generated dynamically each time, so word banks will have
+  different basic words in each generation
+- If word generation fails for a POS tag, the system silently skips it
+- The system ensures exactly 25 words (or your specified total)
+- Fallback mechanisms ensure sufficient word generation even if some POS tags
+  fail or don't have matches in the RiTa lexicon
+
+═══════════════════════════════════════════════════════════════════════════════
+END OF GUIDE
+═══════════════════════════════════════════════════════════════════════════════

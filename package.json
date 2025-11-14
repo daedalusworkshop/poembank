@@ -1,0 +1,14 @@
+{
+  "name": "rita-poem-challenge",
+  "version": "1.0.0",
+  "description": "A beautiful CLI tool for creating poems with constrained word banks",
+  "main": "rita.js",
+  "bin": {
+    "rita": "./rita.js"
+  },
+  "dependencies": {
+    "rita": "^3.1.10",
+    "inquirer": "^8.2.6",
+    "chalk": "^4.1.2"
+  }
+}
