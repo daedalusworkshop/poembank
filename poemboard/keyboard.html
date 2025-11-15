@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Wordpool Keyboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/rita"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      :root {
+        --keyboard-bg: #e5e5e7;
+        --key-bg: #ffffff;
+        --key-active: #d1d1d6;
+        --key-text: #000000;
+        --key-secondary: #007aff;
+        --safe-bottom: env(safe-area-inset-bottom);
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          sans-serif;
+        background: #000;
+        color: #fff;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .demo-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        max-width: 600px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .demo-textarea {
+        flex: 1;
+        background: #1a1a1a;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 16px;
+        font-size: 17px;
+        font-family: inherit;
+        resize: none;
+        margin-bottom: 20px;
+        min-height: 200px;
+        caret-color: #fff !important;
+        cursor: text;
+        outline: none;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        overflow-y: auto;
+      }
+
+      .demo-textarea:focus {
+        border-color: #007aff;
+        caret-color: #fff !important;
+      }
+
+      .demo-textarea:empty:before {
+        content: attr(data-placeholder);
+        color: #666;
+        pointer-events: none;
+      }
+
+      .custom-keyboard {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--keyboard-bg);
+        padding: 6px 3px calc(var(--safe-bottom) + 6px) 3px;
+        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        border-top: 0.5px solid rgba(0, 0, 0, 0.2);
+      }
+
+      .keyboard-group {
+        display: none;
+      }
+
+      .keyboard-group.active {
+        display: block;
+      }
+
+      .keyboard-row {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 4px;
+        padding: 0 3px;
+        justify-content: center;
+      }
+
+      .keyboard-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .keyboard-key {
+        flex: 1;
+        min-width: 0;
+        padding: 12px 8px;
+        background: var(--key-bg);
+        border: none;
+        border-radius: 6px;
+        font-size: 15px;
+        font-weight: 400;
+        color: var(--key-text);
+        cursor: pointer;
+        min-height: 44px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          sans-serif;
+        transition: all 0.1s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        touch-action: manipulation;
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        position: relative;
+      }
+
+      .keyboard-key:active {
+        background: var(--key-active);
+        transform: scale(0.95);
+      }
+
+      .keyboard-key.utility {
+        background: var(--key-secondary);
+        color: white;
+        font-weight: 500;
+      }
+
+      .keyboard-key.utility:active {
+        background: #0051d5;
+      }
+
+      .keyboard-key.space {
+        flex: 4;
+      }
+
+      .keyboard-key.backspace {
+        flex: 1.2;
+      }
+
+      .keyboard-key.enter {
+        flex: 1.2;
+      }
+
+      .keyboard-nav {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        margin: 0 3px 6px 3px;
+      }
+
+      .keyboard-nav-btn {
+        background: var(--key-bg);
+        border: none;
+        border-radius: 6px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        color: var(--key-text);
+        transition: all 0.1s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .keyboard-nav-btn:active {
+        background: var(--key-active);
+        transform: scale(0.95);
+      }
+
+      .keyboard-nav-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      .keyboard-nav-label {
+        flex: 1;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--key-text);
+        letter-spacing: -0.1px;
+      }
+
+      .keyboard-utility-row {
+        display: flex;
+        gap: 4px;
+        padding: 0 3px;
+        margin-top: 4px;
+      }
+
+      @media (min-width: 640px) {
+        .keyboard-key {
+          padding: 14px 10px;
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="demo-container">
+      <h2 style="margin-bottom: 16px; font-size: 20px; font-weight: 600">
+        Wordpool Keyboard Demo
+      </h2>
+      <div
+        class="demo-textarea"
+        id="demoTextarea"
+        contenteditable="true"
+        data-placeholder="Tap to start typing with the custom keyboard below..."
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        inputmode="none"
+      ></div>
+      <p
+        style="
+          font-size: 13px;
+          color: #999;
+          margin-top: -16px;
+          margin-bottom: 20px;
+        "
+      >
+        Use arrow buttons to navigate between word groups
+      </p>
+    </div>
+
+    <div class="custom-keyboard" id="customKeyboard">
+      <!-- Navigation -->
+      <div class="keyboard-nav">
+        <button class="keyboard-nav-btn" id="navPrev">‹</button>
+        <div class="keyboard-nav-label" id="navLabel">Sky 1</div>
+        <button class="keyboard-nav-btn" id="navNext">›</button>
+      </div>
+
+      <!-- Word Groups -->
+      <div class="keyboard-group active" data-group="0" id="group0"></div>
+      <div class="keyboard-group" data-group="1" id="group1"></div>
+      <div class="keyboard-group" data-group="2" id="group2"></div>
+
+      <!-- Utility Row -->
+      <div class="keyboard-utility-row">
+        <button class="keyboard-key space utility" data-action="space">
+          space
+        </button>
+        <button class="keyboard-key backspace utility" data-action="backspace">
+          ⌫
+        </button>
+        <button class="keyboard-key enter utility" data-action="enter">
+          return
+        </button>
+      </div>
+    </div>
+
+    <script>
+      class WordpoolKeyboard {
+        constructor(targetTextarea, wordBank) {
+          this.targetTextarea = targetTextarea;
+          this.wordBank = wordBank || [];
+          this.groups = [];
+          this.currentGroupIndex = 0;
+          this.savedRange = null; // Store cursor position
+
+          this.init();
+        }
+
+        init() {
+          this.groupWords();
+          this.renderGroups();
+          this.attachEventListeners();
+          this.updateNavigation();
+          this.setupCursorTracking();
+        }
+
+        setupCursorTracking() {
+          // Save cursor position when user interacts with textarea
+          const element = this.targetTextarea;
+
+          element.addEventListener("click", () => {
+            this.saveCursorPosition();
+          });
+
+          element.addEventListener("keyup", () => {
+            this.saveCursorPosition();
+          });
+
+          // Save position when selection changes
+          document.addEventListener("selectionchange", () => {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+              const range = selection.getRangeAt(0);
+              // Only save if selection is within our textarea
+              if (element.contains(range.commonAncestorContainer)) {
+                this.savedRange = range.cloneRange();
+              }
+            }
+          });
+        }
+
+        saveCursorPosition() {
+          const selection = window.getSelection();
+          if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const element = this.targetTextarea;
+            // Only save if selection is within our textarea
+            if (element.contains(range.commonAncestorContainer)) {
+              this.savedRange = range.cloneRange();
+            }
+          }
+        }
+
+        // Group words intelligently using Rita:
+        // Grounded: function/connecting words, pronouns (generated dynamically)
+        // Sky 1: core content words (5-7 chars) - nouns, verbs, adjectives
+        // Sky 2: descriptive, poetic words (8+ chars)
+        // Layout: [Grounded (0)] <- [Sky 1 (1)] -> [Sky 2 (2)]
+        // Opens on Sky 1 (index 1)
+        groupWords() {
+          const grounded = []; // Connecting/function words, pronouns
+          const sky1 = []; // 5-7 characters - core content words
+          const sky2 = []; // 8+ characters - descriptive words
+
+          // Check if Rita is available
+          if (typeof RiTa === "undefined") {
+            console.error(
+              "RiTa library not loaded. Please ensure Rita.js is included."
+            );
+            // Fallback: use empty groups or wordBank if available
+            this.groups =
+              this.wordBank && this.wordBank.length > 0
+                ? [
+                    [],
+                    this.wordBank.filter((w) => w.length >= 5 && w.length <= 7),
+                    this.wordBank.filter((w) => w.length >= 8),
+                  ]
+                : [[], [], []];
+            this.currentGroupIndex =
+              this.groups.length > 1 && this.groups[1] ? 1 : 0;
+            return;
+          }
+
+          // Generate Grounded words using Rita - function words, pronouns, determiners, prepositions, conjunctions
+          const groundedPOS = [
+            { pos: "prp", count: 8 }, // Pronouns: I, you, he, she, it, we, they, etc.
+            { pos: "prp$", count: 5 }, // Possessive pronouns: my, your, his, her, etc.
+            { pos: "dt", count: 8 }, // Determiners: the, a, an, this, that, etc.
+            { pos: "in", count: 10 }, // Prepositions: in, on, at, with, from, etc.
+            { pos: "cc", count: 5 }, // Conjunctions: and, or, but, for, etc.
+            { pos: "wdt", count: 3 }, // Wh-determiners: which, what, etc.
+            { pos: "wp", count: 3 }, // Wh-pronouns: who, what, etc.
+            { pos: "wrb", count: 3 }, // Wh-adverbs: where, when, why, how
+            { pos: "rb", count: 5, maxLength: 4 }, // Short adverbs: very, too, also, just, only
+          ];
+
+          groundedPOS.forEach(({ pos, count, maxLength }) => {
+            for (let i = 0; i < count && grounded.length < 50; i++) {
+              try {
+                let word = RiTa.randomWord({ pos });
+                if (word && word.length > 0) {
+                  word = word.toLowerCase();
+                  // Filter by maxLength if specified
+                  if (!maxLength || word.length <= maxLength) {
+                    if (!grounded.includes(word)) {
+                      grounded.push(word);
+                    }
+                  }
+                }
+              } catch (e) {
+                // Skip if word generation fails
+              }
+            }
+          });
+
+          // Generate Sky 1 words (5-7 chars) - core content words
+          const sky1POS = [
+            { pos: "nn", count: 30 }, // Nouns
+            { pos: "jj", count: 25 }, // Adjectives
+            { pos: "vb", count: 25 }, // Verbs (base form)
+            { pos: "vbd", count: 15 }, // Past tense verbs
+            { pos: "vbg", count: 15 }, // Gerunds/participles
+            { pos: "rb", count: 20 }, // Adverbs (longer ones)
+          ];
+
+          sky1POS.forEach(({ pos, count }) => {
+            let attempts = 0;
+            const maxAttempts = count * 3; // Try more times to get words of right length
+            while (sky1.length < 60 && attempts < maxAttempts) {
+              attempts++;
+              try {
+                let word = RiTa.randomWord({ pos });
+                if (word && word.length > 0) {
+                  word = word.toLowerCase();
+                  // Only include words that are 5-7 characters
+                  if (word.length >= 5 && word.length <= 7) {
+                    if (!sky1.includes(word)) {
+                      sky1.push(word);
+                    }
+                  }
+                }
+              } catch (e) {
+                // Skip if word generation fails
+              }
+            }
+          });
+
+          // Generate Sky 2 words (8+ chars) - descriptive, poetic words
+          const sky2POS = [
+            { pos: "nn", count: 30 }, // Longer nouns
+            { pos: "jj", count: 25 }, // Longer adjectives
+            { pos: "vbg", count: 20 }, // Gerunds/participles (often longer)
+            { pos: "vbn", count: 15 }, // Past participles
+            { pos: "rb", count: 20 }, // Longer adverbs
+          ];
+
+          sky2POS.forEach(({ pos, count }) => {
+            let attempts = 0;
+            const maxAttempts = count * 3; // Try more times to get words of right length
+            while (sky2.length < 50 && attempts < maxAttempts) {
+              attempts++;
+              try {
+                let word = RiTa.randomWord({ pos });
+                if (word && word.length > 0) {
+                  word = word.toLowerCase();
+                  // Only include words that are 8+ characters
+                  if (word.length >= 8) {
+                    if (!sky2.includes(word)) {
+                      sky2.push(word);
+                    }
+                  }
+                }
+              } catch (e) {
+                // Skip if word generation fails
+              }
+            }
+          });
+
+          // If we still have words from wordBank, categorize them
+          if (this.wordBank && this.wordBank.length > 0) {
+            this.wordBank.forEach((word) => {
+              const lowerWord = word.toLowerCase();
+              const len = word.length;
+
+              // Check if word already exists in any group
+              const exists =
+                grounded.includes(lowerWord) ||
+                sky1.includes(lowerWord) ||
+                sky2.includes(lowerWord);
+
+              if (!exists) {
+                if (len >= 8) {
+                  sky2.push(lowerWord);
+                } else if (len >= 5 && len <= 7) {
+                  sky1.push(lowerWord);
+                } else {
+                  grounded.push(lowerWord);
+                }
+              }
+            });
+          }
+
+          // Sort each group alphabetically for consistency
+          grounded.sort();
+          sky1.sort();
+          sky2.sort();
+
+          // Order: Grounded (index 0), Sky 1 (index 1), Sky 2 (index 2)
+          // Opens on Sky 1 (index 1) if it exists
+          this.groups = [grounded, sky1, sky2].filter((g) => g.length > 0);
+
+          // Start on Sky 1 (index 1) if it exists, otherwise index 0
+          this.currentGroupIndex =
+            this.groups.length > 1 && this.groups[1] ? 1 : 0;
+        }
+
+        // Layout words in iOS-style rows (horizontal stacking)
+        // Distributes words evenly across rows for better visual balance
+        layoutWordsInRows(words) {
+          if (words.length === 0) return [];
+
+          // Calculate optimal number of rows (aim for 2-4 rows)
+          const targetRows = Math.min(
+            Math.max(Math.ceil(words.length / 6), 2),
+            4
+          );
+          const wordsPerRow = Math.ceil(words.length / targetRows);
+
+          const rows = [];
+          for (let i = 0; i < words.length; i += wordsPerRow) {
+            rows.push(words.slice(i, i + wordsPerRow));
+          }
+
+          return rows;
+        }
+
+        renderGroups() {
+          this.groups.forEach((group, groupIndex) => {
+            const container = document.getElementById(`group${groupIndex}`);
+            if (!container) return;
+
+            container.innerHTML = "";
+
+            // Layout words in horizontal rows
+            const rows = this.layoutWordsInRows(group);
+
+            rows.forEach((row) => {
+              const rowEl = document.createElement("div");
+              rowEl.className = "keyboard-row";
+
+              row.forEach((word) => {
+                const key = document.createElement("button");
+                key.className = "keyboard-key";
+                key.textContent = word;
+                key.dataset.word = word;
+                key.addEventListener("click", () => this.insertWord(word));
+                rowEl.appendChild(key);
+              });
+
+              container.appendChild(rowEl);
+            });
+          });
+        }
+
+        attachEventListeners() {
+          // Navigation buttons
+          document
+            .getElementById("navPrev")
+            .addEventListener("click", () => this.prevGroup());
+          document
+            .getElementById("navNext")
+            .addEventListener("click", () => this.nextGroup());
+
+          // Utility buttons
+          document.querySelectorAll("[data-action]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              const action = e.target.dataset.action;
+              this.handleUtilityAction(action);
+            });
+          });
+
+          // Keyboard shortcuts
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              this.prevGroup();
+            } else if (e.key === "ArrowRight" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              this.nextGroup();
+            }
+          });
+
+          // Swipe gestures
+          this.setupSwipeGestures();
+        }
+
+        setupSwipeGestures() {
+          const keyboard = document.getElementById("customKeyboard");
+          let touchStartX = 0;
+          let touchEndX = 0;
+          const minSwipeDistance = 50;
+
+          keyboard.addEventListener(
+            "touchstart",
+            (e) => {
+              touchStartX = e.changedTouches[0].screenX;
+            },
+            { passive: true }
+          );
+
+          keyboard.addEventListener(
+            "touchend",
+            (e) => {
+              touchEndX = e.changedTouches[0].screenX;
+              this.handleSwipe(touchStartX, touchEndX, minSwipeDistance);
+            },
+            { passive: true }
+          );
+
+          // Also support mouse drag for desktop testing
+          let mouseDownX = 0;
+          let isDragging = false;
+
+          keyboard.addEventListener("mousedown", (e) => {
+            mouseDownX = e.clientX;
+            isDragging = true;
+          });
+
+          keyboard.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            // Prevent text selection while dragging
+            e.preventDefault();
+          });
+
+          keyboard.addEventListener("mouseup", (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            const mouseUpX = e.clientX;
+            this.handleSwipe(mouseDownX, mouseUpX, minSwipeDistance);
+          });
+
+          keyboard.addEventListener("mouseleave", () => {
+            isDragging = false;
+          });
+        }
+
+        handleSwipe(startX, endX, minDistance) {
+          const swipeDistance = endX - startX;
+
+          if (Math.abs(swipeDistance) < minDistance) {
+            return; // Not a significant swipe
+          }
+
+          if (swipeDistance > 0) {
+            // Swipe right - go to Grounded (index 0, previous from Sky 1)
+            this.prevGroup();
+          } else {
+            // Swipe left - go to Sky 2 (index 2, next from Sky 1)
+            this.nextGroup();
+          }
+        }
+
+        prevGroup() {
+          if (this.currentGroupIndex > 0) {
+            this.currentGroupIndex--;
+            this.updateActiveGroup();
+            this.updateNavigation();
+          }
+        }
+
+        nextGroup() {
+          if (this.currentGroupIndex < this.groups.length - 1) {
+            this.currentGroupIndex++;
+            this.updateActiveGroup();
+            this.updateNavigation();
+          }
+        }
+
+        updateActiveGroup() {
+          document
+            .querySelectorAll(".keyboard-group")
+            .forEach((group, index) => {
+              if (index === this.currentGroupIndex) {
+                group.classList.add("active");
+              } else {
+                group.classList.remove("active");
+              }
+            });
+        }
+
+        updateNavigation() {
+          const prevBtn = document.getElementById("navPrev");
+          const nextBtn = document.getElementById("navNext");
+          const label = document.getElementById("navLabel");
+
+          // Group order: [Grounded (0)] <- [Sky 1 (1)] -> [Sky 2 (2)]
+          prevBtn.disabled = this.currentGroupIndex === 0;
+          nextBtn.disabled = this.currentGroupIndex === this.groups.length - 1;
+
+          // Map indices to names
+          const groupNames = ["Grounded", "Sky 1", "Sky 2"];
+          const actualIndex = this.getActualGroupIndex(this.currentGroupIndex);
+          label.textContent =
+            groupNames[actualIndex] || `Group ${this.currentGroupIndex + 1}`;
+        }
+
+        // Map current index to actual group type
+        // Groups array is always: [grounded, sky1, sky2] (empty ones filtered)
+        // So we need to track which type each index represents
+        getActualGroupIndex(currentIndex) {
+          // Since we always create groups in order [grounded, sky1, sky2]
+          // and filter empty ones, we need to track the original indices
+          // For now, let's use a simpler approach: check the first word in the group
+          if (
+            !this.groups[currentIndex] ||
+            this.groups[currentIndex].length === 0
+          ) {
+            return currentIndex;
+          }
+
+          const sampleWord = this.groups[currentIndex][0].toLowerCase();
+          const len = sampleWord.length;
+
+          // Check if it's a connector word or pronoun
+          const connectorWords = new Set([
+            "the",
+            "and",
+            "or",
+            "but",
+            "for",
+            "with",
+            "from",
+            "about",
+            "into",
+            "upon",
+            "above",
+            "across",
+            "after",
+            "against",
+            "along",
+            "among",
+            "around",
+            "at",
+            "before",
+            "behind",
+            "below",
+            "beneath",
+            "beside",
+            "between",
+            "beyond",
+            "by",
+            "during",
+            "except",
+            "inside",
+            "near",
+            "of",
+            "off",
+            "on",
+            "onto",
+            "out",
+            "outside",
+            "over",
+            "past",
+            "since",
+            "through",
+            "throughout",
+            "till",
+            "to",
+            "toward",
+            "under",
+            "until",
+            "up",
+            "via",
+            "within",
+            "without",
+            // Pronouns
+            "i",
+            "you",
+            "he",
+            "she",
+            "it",
+            "we",
+            "they",
+            "me",
+            "him",
+            "her",
+            "us",
+            "them",
+            "my",
+            "your",
+            "his",
+            "her",
+            "its",
+            "our",
+            "their",
+          ]);
+
+          if (connectorWords.has(sampleWord) || len <= 4) {
+            return 0; // Grounded
+          } else if (len >= 8) {
+            return 2; // Sky 2
+          } else {
+            return 1; // Sky 1
+          }
+        }
+
+        insertWord(word) {
+          if (!this.targetTextarea) return;
+
+          const element = this.targetTextarea;
+          element.focus();
+
+          // Use Selection API for contenteditable
+          const selection = window.getSelection();
+          let range = null;
+
+          // Try to get current selection first
+          if (selection.rangeCount > 0) {
+            const currentRange = selection.getRangeAt(0);
+            // Only use if it's within our textarea
+            if (element.contains(currentRange.commonAncestorContainer)) {
+              range = currentRange;
+            }
+          }
+
+          // If no valid selection, try to restore saved position
+          if (!range && this.savedRange) {
+            try {
+              // Check if saved range is still valid
+              if (element.contains(this.savedRange.commonAncestorContainer)) {
+                range = this.savedRange.cloneRange();
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            } catch (e) {
+              // Saved range is no longer valid, ignore it
+            }
+          }
+
+          // If still no range, create one at the end (fallback)
+          if (!range) {
+            range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          // Insert word with space
+          const textNode = document.createTextNode(word + " ");
+          range.insertNode(textNode);
+
+          // Move cursor after inserted text
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          // Save the new cursor position
+          this.savedRange = range.cloneRange();
+
+          // Trigger input event
+          const event = new Event("input", { bubbles: true });
+          element.dispatchEvent(event);
+        }
+
+        handleUtilityAction(action) {
+          if (!this.targetTextarea) return;
+
+          const element = this.targetTextarea;
+          element.focus();
+
+          const selection = window.getSelection();
+          let range = null;
+
+          // Try to get current selection first
+          if (selection.rangeCount > 0) {
+            const currentRange = selection.getRangeAt(0);
+            if (element.contains(currentRange.commonAncestorContainer)) {
+              range = currentRange;
+            }
+          }
+
+          // If no valid selection, try to restore saved position
+          if (!range && this.savedRange) {
+            try {
+              if (element.contains(this.savedRange.commonAncestorContainer)) {
+                range = this.savedRange.cloneRange();
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            } catch (e) {
+              // Saved range is no longer valid
+            }
+          }
+
+          // If still no range, create one at the end (fallback)
+          if (!range) {
+            range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          switch (action) {
+            case "space":
+              this.insertText(" ");
+              break;
+            case "backspace":
+              if (range.collapsed) {
+                // Delete character before cursor
+                if (range.startOffset > 0) {
+                  range.setStart(range.startContainer, range.startOffset - 1);
+                  range.deleteContents();
+                }
+              } else {
+                // Delete selection
+                range.deleteContents();
+              }
+              selection.removeAllRanges();
+              selection.addRange(range);
+              // Save the new cursor position
+              this.savedRange = range.cloneRange();
+              const backspaceEvent = new Event("input", { bubbles: true });
+              element.dispatchEvent(backspaceEvent);
+              break;
+            case "enter":
+              this.insertText("\n");
+              break;
+          }
+        }
+
+        insertText(text) {
+          if (!this.targetTextarea) return;
+
+          const element = this.targetTextarea;
+          element.focus();
+
+          const selection = window.getSelection();
+          let range = null;
+
+          // Try to get current selection first
+          if (selection.rangeCount > 0) {
+            const currentRange = selection.getRangeAt(0);
+            if (element.contains(currentRange.commonAncestorContainer)) {
+              range = currentRange;
+            }
+          }
+
+          // If no valid selection, try to restore saved position
+          if (!range && this.savedRange) {
+            try {
+              if (element.contains(this.savedRange.commonAncestorContainer)) {
+                range = this.savedRange.cloneRange();
+                selection.removeAllRanges();
+                selection.addRange(range);
+              }
+            } catch (e) {
+              // Saved range is no longer valid
+            }
+          }
+
+          // If still no range, create one at the end (fallback)
+          if (!range) {
+            range = document.createRange();
+            range.selectNodeContents(element);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+
+          // Insert text
+          const textNode = document.createTextNode(text);
+          range.insertNode(textNode);
+
+          // Move cursor after inserted text
+          range.setStartAfter(textNode);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+
+          // Save the new cursor position
+          this.savedRange = range.cloneRange();
+
+          const event = new Event("input", { bubbles: true });
+          element.dispatchEvent(event);
+        }
+
+        updateWordBank(newWordBank) {
+          this.wordBank = newWordBank || [];
+          this.groupWords();
+          this.renderGroups();
+          this.updateActiveGroup();
+          this.updateNavigation();
+        }
+      }
+
+      // Demo initialization
+      document.addEventListener("DOMContentLoaded", () => {
+        const textarea = document.getElementById("demoTextarea");
+
+        // Initialize keyboard with empty word bank - words will be generated dynamically using Rita
+        const keyboard = new WordpoolKeyboard(textarea, []);
+
+        // Keep textarea focused when clicking on keyboard, but preserve cursor position
+        document
+          .getElementById("customKeyboard")
+          .addEventListener("click", () => {
+            setTimeout(() => {
+              textarea.focus();
+              // Don't reset cursor position - let the saved position be used
+            }, 10);
+          });
+      });
+
+      // Export for use in other files
+      if (typeof module !== "undefined" && module.exports) {
+        module.exports = WordpoolKeyboard;
+      } else {
+        window.WordpoolKeyboard = WordpoolKeyboard;
+      }
+    </script>
+  </body>
+</html>
