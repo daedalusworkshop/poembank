@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rita Poem Challenge</title>
+    <script src="https://cdn.jsdelivr.net/npm/rita"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #fafafa;
+        color: #333;
+        line-height: 1.6;
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .container {
+        background: white;
+        border-radius: 8px;
+        padding: 3rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        text-align: center;
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+        font-weight: 300;
+        letter-spacing: 2px;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        margin-bottom: 3rem;
+        font-weight: 300;
+      }
+
+      .step {
+        display: none;
+      }
+
+      .step.active {
+        display: block;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #555;
+        font-size: 0.95rem;
+      }
+
+      input[type="text"],
+      textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-family: inherit;
+        margin-bottom: 1rem;
+        transition: border-color 0.2s;
+      }
+
+      input[type="text"]:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #3498db;
+      }
+
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+        font-family: inherit;
+      }
+
+      button:hover {
+        background: #2980b9;
+      }
+
+      button:disabled {
+        background: #bdc3c7;
+        cursor: not-allowed;
+      }
+
+      .word-banks {
+        margin: 2rem 0;
+      }
+
+      .word-bank-option {
+        border: 2px solid #ecf0f1;
+        border-radius: 4px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .word-bank-option:hover {
+        border-color: #3498db;
+        background: #f8f9fa;
+      }
+
+      .word-bank-option.selected {
+        border-color: #3498db;
+        background: #ebf5fb;
+      }
+
+      .word-bank-option h3 {
+        margin-bottom: 1rem;
+        color: #2c3e50;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      .words {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+
+      .word {
+        background: #ecf0f1;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        color: #2c3e50;
+      }
+
+      .selected-bank {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 1.5rem;
+        margin: 2rem 0;
+      }
+
+      .selected-bank h3 {
+        margin-bottom: 1rem;
+        color: #2c3e50;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      .error {
+        color: #e74c3c;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+      }
+
+      .error-words {
+        color: #e74c3c;
+        font-weight: 500;
+      }
+
+      .poem-display {
+        background: #f8f9fa;
+        border-left: 4px solid #3498db;
+        padding: 2rem;
+        margin: 2rem 0;
+        white-space: pre-wrap;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #2c3e50;
+      }
+
+      .loading {
+        text-align: center;
+        color: #7f8c8d;
+        font-style: italic;
+        margin: 1rem 0;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .button-group button.secondary {
+        background: #95a5a6;
+      }
+
+      .button-group button.secondary:hover {
+        background: #7f8c8d;
+      }
+
+      .emotion-pinned {
+        background: #f8f9fa;
+        border-left: 3px solid #3498db;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        color: #555;
+        font-style: italic;
+      }
+
+      .emotion-pinned strong {
+        color: #2c3e50;
+        font-style: normal;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🌸 RITA POEM CHALLENGE 🌸</h1>
+      <p class="subtitle">A creative constraint tool for poetic expression</p>
+
+      <!-- Step 1: Emotion Input -->
+      <div class="step active" id="step1">
+        <label for="emotion"
+          >✨ Describe an emotion that's been feeling alive for you
+          lately:</label
+        >
+        <input
+          type="text"
+          id="emotion"
+          placeholder="e.g., a quiet longing for something undefined"
+        />
+        <button onclick="generateWordBanks()">Continue</button>
+      </div>
+
+      <!-- Step 2: Word Bank Selection -->
+      <div class="step" id="step2">
+        <div class="emotion-pinned" id="emotionDisplay2" style="display: none">
+          <strong>Your emotion:</strong> <span id="emotionText2"></span>
+        </div>
+        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
+          Choose Your Word Bank (25 Words)
+        </h2>
+        <div class="loading" id="loading">
+          Rita is weaving three word bank options...
+        </div>
+        <div class="word-banks" id="wordBanks"></div>
+        <button onclick="selectWordBank()" id="selectBtn" disabled>
+          Continue with Selected Bank
+        </button>
+      </div>
+
+      <!-- Step 3: Selected Bank Display -->
+      <div class="step" id="step3">
+        <div class="emotion-pinned" id="emotionDisplay3" style="display: none">
+          <strong>Your emotion:</strong> <span id="emotionText3"></span>
+        </div>
+        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
+          Your Word Bank
+        </h2>
+        <div class="selected-bank" id="selectedBankDisplay"></div>
+        <p style="color: #7f8c8d; margin-bottom: 1rem; font-size: 0.9rem">
+          💡 Tip: Use only these words to write your poem!
+        </p>
+        <label for="poem">✍️ Write your poem using only the words above:</label>
+        <textarea id="poem" placeholder="Write your poem here..."></textarea>
+        <div id="poemError" class="error"></div>
+        <button onclick="validateAndShowPoem()">Submit Poem</button>
+      </div>
+
+      <!-- Step 4: Final Poem Display -->
+      <div class="step" id="step4">
+        <div class="emotion-pinned" id="emotionDisplay4" style="display: none">
+          <strong>Your emotion:</strong> <span id="emotionText4"></span>
+        </div>
+        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
+          Your Poem
+        </h2>
+        <div class="poem-display" id="poemDisplay"></div>
+        <div class="button-group">
+          <button onclick="createAnother()">Create Another Poem</button>
+          <button class="secondary" onclick="window.location.reload()">
+            Start Over
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let wordBanks = [];
+      let selectedBankIndex = -1;
+      let selectedWordBank = [];
+      let currentEmotion = "";
+
+      function showStep(stepNumber) {
+        document.querySelectorAll(".step").forEach((step) => {
+          step.classList.remove("active");
+        });
+        document.getElementById(`step${stepNumber}`).classList.add("active");
+      }
+
+      function generateBasicWords() {
+        // Generate basic building blocks dynamically using RiTa randomWord with Penn POS tags
+        const basicWords = new Set();
+
+        // Define POS tag categories based on Penn tag set (from https://rednoise.org/rita/reference/postags.html)
+        // Map of category names to their Penn POS tags
+        const posCategories = {
+          // Pronouns (prp: Personal pronoun, prp$: Possessive pronoun)
+          pronouns: ["prp", "prp$"],
+          // Coordinating conjunctions (cc)
+          conjunctions: ["cc"],
+          // Determiners (dt: Determiner, pdt: Predeterminer)
+          determiners: ["dt", "pdt"],
+          // Prepositions (in: Preposition or subordinating conjunction)
+          prepositions: ["in"],
+          // Common verbs (vb: base, vbd: past, vbg: gerund, vbn: past participle, vbp: non-3rd person present, vbz: 3rd person present)
+          verbs: ["vb", "vbd", "vbg", "vbn", "vbp", "vbz"],
+          // Wh-words (wdt: Wh-determiner, wp: Wh-pronoun, wp$: Possessive wh-pronoun, wrb: Wh-adverb)
+          whWords: ["wdt", "wp", "wp$", "wrb"],
+          // Adverbs (rb: Adverb)
+          adverbs: ["rb"],
+          // Modal verbs (md: Modal)
+          modals: ["md"],
+          // Particles (rp: Particle)
+          particles: ["rp"],
+          // To (to: to)
+          to: ["to"],
+        };
+
+        // Generate at least one word for each category
+        Object.keys(posCategories).forEach((category) => {
+          posCategories[category].forEach((pos) => {
+            try {
+              const word = RiTa.randomWord({ pos });
+              if (word && word.length > 0) {
+                basicWords.add(word.toLowerCase());
+              }
+            } catch (e) {
+              // Skip if word generation fails for this POS
+            }
+          });
+        });
+
+        // Generate additional words for important categories to ensure variety
+        // Important categories that need multiple examples
+        const importantCategories = {
+          pronouns: ["prp", "prp$"],
+          conjunctions: ["cc"],
+          determiners: ["dt"],
+          prepositions: ["in"],
+          verbs: ["vb", "vbd", "vbz", "vbp"],
+          whWords: ["wdt", "wp", "wrb"],
+        };
+
+        // Generate 2-3 additional words per important category
+        Object.keys(importantCategories).forEach((category) => {
+          const attempts = 3; // Try up to 3 times per category
+          for (let i = 0; i < attempts; i++) {
+            const posArray = importantCategories[category];
+            const randomPos =
+              posArray[Math.floor(Math.random() * posArray.length)];
+            try {
+              const word = RiTa.randomWord({ pos: randomPos });
+              if (word && word.length > 0) {
+                basicWords.add(word.toLowerCase());
+              }
+            } catch (e) {
+              // Skip if word generation fails
+            }
+          }
+        });
+
+        // If we still don't have enough words, try some fallback POS tags
+        if (basicWords.size < 10) {
+          const fallbackPos = ["dt", "prp", "cc", "in", "vb", "rb"];
+          fallbackPos.forEach((pos) => {
+            if (basicWords.size >= 15) return; // Stop if we have enough
+            try {
+              const word = RiTa.randomWord({ pos });
+              if (word && word.length > 0) {
+                basicWords.add(word.toLowerCase());
+              }
+            } catch (e) {
+              // Skip if word generation fails
+            }
+          });
+        }
+
+        return Array.from(basicWords);
+      }
+
+      function generateWordBank(emotionText) {
+        // Generate basic building blocks dynamically
+        const basicWords = generateBasicWords();
+
+        const words = RiTa.tokenize(emotionText);
+        const poses = RiTa.pos(emotionText);
+
+        const uniquePOS = [
+          ...new Set(
+            poses.filter(
+              (pos) =>
+                pos &&
+                pos.length > 0 &&
+                ![".", ",", "!", "?", ":", ";", "..."].includes(pos)
+            )
+          ),
+        ];
+
+        const wordBank = new Set();
+        const posTypes = ["nn", "jj", "vb", "rb", "prp", "dt"];
+
+        // Add some basic words first (randomly select 8-10 from the basic words list)
+        const shuffledBasic = [...basicWords].sort(() => Math.random() - 0.5);
+        const basicCount = Math.min(
+          Math.floor(Math.random() * 3) + 8, // 8-10 basic words (or available amount)
+          shuffledBasic.length,
+          25 - wordBank.size
+        );
+        for (let i = 0; i < basicCount && wordBank.size < 25; i++) {
+          if (shuffledBasic[i]) {
+            wordBank.add(shuffledBasic[i]);
+          }
+        }
+
+        // Then add words based on emotion's POS tags
+        uniquePOS.forEach((pos) => {
+          if (wordBank.size < 25) {
+            try {
+              const word = RiTa.randomWord({ pos });
+              if (word && word.length > 0) {
+                wordBank.add(word.toLowerCase());
+              }
+            } catch (e) {
+              // Skip if word generation fails
+            }
+          }
+        });
+
+        // Fill remaining slots with random words
+        while (wordBank.size < 25) {
+          try {
+            const randomPos =
+              posTypes[Math.floor(Math.random() * posTypes.length)];
+            const word = RiTa.randomWord({
+              pos: randomPos,
+              syllables: Math.floor(Math.random() * 3) + 1,
+            });
+            if (word && word.length > 0) {
+              wordBank.add(word.toLowerCase());
+            }
+          } catch (e) {
+            try {
+              const word = RiTa.randomWord({
+                syllables: Math.floor(Math.random() * 3) + 1,
+              });
+              if (word && word.length > 0) {
+                wordBank.add(word.toLowerCase());
+              }
+            } catch (e2) {
+              // If still not enough, add more basic words
+              const remainingBasic = shuffledBasic.filter(
+                (w) => !wordBank.has(w)
+              );
+              if (remainingBasic.length > 0 && wordBank.size < 25) {
+                wordBank.add(remainingBasic[0]);
+              } else {
+                break;
+              }
+            }
+          }
+        }
+
+        const bankArray = Array.from(wordBank).sort();
+        return bankArray.slice(0, 25);
+      }
+
+      function updateEmotionDisplay(emotion) {
+        currentEmotion = emotion;
+        // Update all emotion displays
+        for (let i = 2; i <= 4; i++) {
+          const display = document.getElementById(`emotionDisplay${i}`);
+          const text = document.getElementById(`emotionText${i}`);
+          if (display && text) {
+            text.textContent = emotion;
+            display.style.display = "block";
+          }
+        }
+      }
+
+      function generateWordBanks() {
+        const emotion = document.getElementById("emotion").value.trim();
+
+        if (!emotion || emotion.length < 3) {
+          alert("Please describe your emotion (at least 3 characters)");
+          return;
+        }
+
+        updateEmotionDisplay(emotion);
+        showStep(2);
+        document.getElementById("loading").style.display = "block";
+        document.getElementById("wordBanks").innerHTML = "";
+
+        // Generate 3 word banks
+        wordBanks = [];
+        for (let i = 0; i < 3; i++) {
+          wordBanks.push(generateWordBank(emotion));
+        }
+
+        // Display word banks
+        setTimeout(() => {
+          document.getElementById("loading").style.display = "none";
+          const container = document.getElementById("wordBanks");
+
+          wordBanks.forEach((bank, index) => {
+            const option = document.createElement("div");
+            option.className = "word-bank-option";
+            option.dataset.index = index;
+            option.onclick = () => selectBankOption(index);
+
+            const title = document.createElement("h3");
+            title.textContent = `Option ${index + 1}`;
+            option.appendChild(title);
+
+            const wordsDiv = document.createElement("div");
+            wordsDiv.className = "words";
+            bank.forEach((word) => {
+              const wordSpan = document.createElement("span");
+              wordSpan.className = "word";
+              wordSpan.textContent = word;
+              wordsDiv.appendChild(wordSpan);
+            });
+            option.appendChild(wordsDiv);
+
+            container.appendChild(option);
+          });
+        }, 500);
+      }
+
+      function selectBankOption(index) {
+        selectedBankIndex = index;
+
+        // Update UI
+        document.querySelectorAll(".word-bank-option").forEach((opt, i) => {
+          if (i === index) {
+            opt.classList.add("selected");
+          } else {
+            opt.classList.remove("selected");
+          }
+        });
+
+        document.getElementById("selectBtn").disabled = false;
+      }
+
+      function selectWordBank() {
+        if (selectedBankIndex === -1) {
+          alert("Please select a word bank");
+          return;
+        }
+
+        selectedWordBank = wordBanks[selectedBankIndex];
+        showStep(3);
+
+        // Display selected bank
+        const display = document.getElementById("selectedBankDisplay");
+        display.innerHTML = "";
+
+        const wordsDiv = document.createElement("div");
+        wordsDiv.className = "words";
+        selectedWordBank.forEach((word) => {
+          const wordSpan = document.createElement("span");
+          wordSpan.className = "word";
+          wordSpan.textContent = word;
+          wordsDiv.appendChild(wordSpan);
+        });
+        display.appendChild(wordsDiv);
+      }
+
+      function validatePoem(poem, wordBank) {
+        const normalizeWord = (word) =>
+          word.toLowerCase().replace(/[^\w]/g, "");
+        const bankSet = new Set(wordBank.map(normalizeWord));
+
+        const invalidWords = RiTa.tokenize(poem.toLowerCase())
+          .map(normalizeWord)
+          .filter((word) => word.length > 0 && !bankSet.has(word));
+
+        return {
+          valid: invalidWords.length === 0,
+          invalidWords: [...new Set(invalidWords)],
+        };
+      }
+
+      function validateAndShowPoem() {
+        const poem = document.getElementById("poem").value.trim();
+        const errorDiv = document.getElementById("poemError");
+
+        if (!poem || poem.length < 5) {
+          errorDiv.textContent = "Please write a poem (at least 5 characters)";
+          return;
+        }
+
+        const validation = validatePoem(poem, selectedWordBank);
+
+        if (validation.valid) {
+          errorDiv.textContent = "";
+          document.getElementById("poemDisplay").textContent = poem;
+          showStep(4);
+        } else {
+          errorDiv.innerHTML = `⚠️ Invalid words detected: <span class="error-words">${validation.invalidWords.join(
+            ", "
+          )}</span><br>Please use only words from your word bank.`;
+        }
+      }
+
+      function createAnother() {
+        // Reset to step 1
+        document.getElementById("emotion").value = "";
+        document.getElementById("poem").value = "";
+        document.getElementById("poemError").textContent = "";
+        selectedBankIndex = -1;
+        selectedWordBank = [];
+        wordBanks = [];
+        currentEmotion = "";
+        // Hide emotion displays
+        for (let i = 2; i <= 4; i++) {
+          const display = document.getElementById(`emotionDisplay${i}`);
+          if (display) {
+            display.style.display = "none";
+          }
+        }
+        showStep(1);
+      }
+
+      // Allow Enter key to submit in emotion input
+      document.getElementById("emotion").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          generateWordBanks();
+        }
+      });
+    </script>
+  </body>
+</html>

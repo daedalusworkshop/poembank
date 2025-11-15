@@ -2,298 +2,589 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rita Poem Challenge</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Rita" />
+    <title>Rita · Poetry Flow</title>
     <script src="https://cdn.jsdelivr.net/npm/rita"></script>
     <style>
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      :root {
+        --spring-duration: 600ms;
+        --spring-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --gentle-ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --ink: #1a1a1a;
+        --ink-light: #666;
+        --ink-whisper: #999;
+        --paper: #fafaf9;
+        --paper-warm: #f5f5f4;
+        --accent: #2563eb;
+        --accent-soft: #dbeafe;
+        --error: #dc2626;
+        --error-soft: #fee2e2;
+
+        /* iOS safe areas */
+        --safe-top: env(safe-area-inset-top);
+        --safe-bottom: env(safe-area-inset-bottom);
+        --safe-left: env(safe-area-inset-left);
+        --safe-right: env(safe-area-inset-right);
+      }
+
+      @supports (font: -apple-system-body) {
+        body {
+          font: -apple-system-body;
+        }
       }
 
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
-        background: #fafafa;
-        color: #333;
-        line-height: 1.6;
-        padding: 2rem;
-        max-width: 800px;
-        margin: 0 auto;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          "Segoe UI", sans-serif;
+        background: var(--paper);
+        color: var(--ink);
+        line-height: 1.47;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        touch-action: manipulation;
+        overflow-x: hidden;
+        /* Prevent rubber-banding on body */
+        position: fixed;
+        width: 100%;
+        height: 100%;
       }
 
-      .container {
-        background: white;
+      .app {
+        height: 100vh;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Header - iOS 44pt touch target minimum */
+      .header {
+        padding: calc(var(--safe-top) + 20px) max(20px, var(--safe-left)) 16px
+          max(20px, var(--safe-right));
+        text-align: center;
+        background: var(--paper);
+        z-index: 10;
+        border-bottom: 0.5px solid rgba(0, 0, 0, 0.08);
+        flex-shrink: 0;
+      }
+
+      .header h1 {
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.4px;
+        color: var(--ink);
+        margin-bottom: 2px;
+      }
+
+      .header .step-indicator {
+        font-size: 13px;
+        color: var(--ink-whisper);
+        font-weight: 400;
+        letter-spacing: -0.08px;
+      }
+
+      /* Flow Container */
+      .flow-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+        min-height: 0; /* Critical for flex scrolling */
+      }
+
+      .flow-step {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(100%);
+        transition: all var(--spring-duration) var(--spring-ease);
+        overflow: hidden;
+      }
+
+      .flow-step.active {
+        opacity: 1;
+        pointer-events: all;
+        transform: translateX(0);
+        position: relative;
+      }
+
+      .flow-step.exiting {
+        opacity: 0;
+        transform: translateX(-30%);
+      }
+
+      /* Content Padding - iOS spacing conventions */
+      .step-content {
+        padding: 32px max(20px, var(--safe-left)) 0 max(20px, var(--safe-right));
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        min-height: 0;
+      }
+
+      /* Prompt Styles */
+      .prompt {
+        font-size: 17px;
+        line-height: 1.47;
+        color: var(--ink-light);
+        margin-bottom: 28px;
+        font-weight: 400;
+        letter-spacing: -0.4px;
+      }
+
+      .prompt-lg {
+        font-size: 20px;
+        line-height: 1.4;
+        margin-bottom: 32px;
+        font-weight: 600;
+        letter-spacing: -0.45px;
+        color: var(--ink);
+      }
+
+      /* Emotion Whisper */
+      .emotion-whisper {
+        padding: 12px 16px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-soft) 0%,
+          transparent 100%
+        );
+        border-left: 3px solid var(--accent);
+        font-size: 15px;
+        color: var(--ink-light);
+        font-style: italic;
+        margin-bottom: 24px;
         border-radius: 8px;
-        padding: 3rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        animation: slideInLeft 0.5s var(--gentle-ease);
+        letter-spacing: -0.24px;
       }
 
-      h1 {
-        text-align: center;
-        font-size: 1.8rem;
-        margin-bottom: 0.5rem;
-        color: #2c3e50;
-        font-weight: 300;
-        letter-spacing: 2px;
+      @keyframes slideInLeft {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
       }
 
-      .subtitle {
-        text-align: center;
-        color: #7f8c8d;
-        font-size: 0.9rem;
-        margin-bottom: 3rem;
-        font-weight: 300;
+      .emotion-whisper strong {
+        color: var(--ink);
+        font-style: normal;
+        font-weight: 600;
       }
 
-      .step {
-        display: none;
-      }
-
-      .step.active {
-        display: block;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 0.5rem;
-        color: #555;
-        font-size: 0.95rem;
+      /* Input Styles - iOS native feel */
+      .input-wrapper {
+        margin-bottom: 24px;
       }
 
       input[type="text"],
       textarea {
         width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 1rem;
-        font-family: inherit;
-        margin-bottom: 1rem;
-        transition: border-color 0.2s;
+        padding: 12px 0;
+        border: none;
+        border-bottom: 0.5px solid rgba(0, 0, 0, 0.2);
+        background: transparent;
+        font-size: 17px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          sans-serif;
+        color: var(--ink);
+        transition: border-color 0.3s var(--gentle-ease);
+        resize: none;
+        line-height: 1.47;
+        letter-spacing: -0.4px;
+        -webkit-appearance: none;
+        appearance: none;
       }
 
       input[type="text"]:focus,
       textarea:focus {
         outline: none;
-        border-color: #3498db;
+        border-bottom-color: var(--accent);
+      }
+
+      input[type="text"]::placeholder,
+      textarea::placeholder {
+        color: var(--ink-whisper);
+        font-style: italic;
+        opacity: 1;
       }
 
       textarea {
-        min-height: 120px;
-        resize: vertical;
+        min-height: 240px;
+        padding-top: 8px;
       }
 
-      button {
-        background: #3498db;
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 4px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.2s;
-        font-family: inherit;
-      }
-
-      button:hover {
-        background: #2980b9;
-      }
-
-      button:disabled {
-        background: #bdc3c7;
-        cursor: not-allowed;
-      }
-
-      .word-banks {
-        margin: 2rem 0;
+      /* Word Banks - iOS card design */
+      .word-bank-scroll {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 calc(-1 * max(20px, var(--safe-left))) 0
+          calc(-1 * max(20px, var(--safe-right)));
+        padding: 0 max(20px, var(--safe-left)) calc(var(--safe-bottom) + 20px)
+          max(20px, var(--safe-right));
+        overscroll-behavior: contain;
       }
 
       .word-bank-option {
-        border: 2px solid #ecf0f1;
-        border-radius: 4px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
+        padding: 16px;
+        margin-bottom: 12px;
+        border-radius: 12px;
+        background: white;
+        border: 0.5px solid rgba(0, 0, 0, 0.08);
+        transition: all 0.2s var(--gentle-ease);
         cursor: pointer;
-        transition: all 0.2s;
+        position: relative;
+        /* iOS shadow depth */
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        min-height: 44px; /* iOS touch target */
       }
 
-      .word-bank-option:hover {
-        border-color: #3498db;
-        background: #f8f9fa;
+      .word-bank-option:active {
+        transform: scale(0.98);
+        opacity: 0.9;
       }
 
       .word-bank-option.selected {
-        border-color: #3498db;
-        background: #ebf5fb;
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
       }
 
       .word-bank-option h3 {
-        margin-bottom: 1rem;
-        color: #2c3e50;
-        font-size: 1rem;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-light);
+        margin-bottom: 12px;
+        letter-spacing: -0.08px;
+        text-transform: uppercase;
+      }
+
+      .word-bank-option.selected h3 {
+        color: var(--accent);
       }
 
       .words {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 8px;
       }
 
       .word {
-        background: #ecf0f1;
-        padding: 0.4rem 0.8rem;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        color: #2c3e50;
+        padding: 6px 12px;
+        background: var(--paper-warm);
+        border-radius: 8px;
+        font-size: 15px;
+        color: var(--ink);
+        font-weight: 400;
+        transition: all 0.2s var(--gentle-ease);
+        letter-spacing: -0.24px;
+        line-height: 1.33;
       }
 
-      .selected-bank {
-        background: #f8f9fa;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        padding: 1.5rem;
-        margin: 2rem 0;
-      }
-
-      .selected-bank h3 {
-        margin-bottom: 1rem;
-        color: #2c3e50;
-        font-size: 1rem;
+      .word-bank-option.selected .word {
+        background: white;
         font-weight: 500;
       }
 
-      .error {
-        color: #e74c3c;
-        margin-top: 0.5rem;
-        font-size: 0.9rem;
+      /* Selected Bank Display */
+      .selected-bank {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border: 0.5px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      .selected-bank .words {
+        margin-top: 8px;
+      }
+
+      /* Loading State */
+      .loading {
+        text-align: center;
+        color: var(--ink-whisper);
+        font-size: 15px;
+        font-style: italic;
+        padding: 48px 0;
+        animation: pulse 2s ease-in-out infinite;
+        letter-spacing: -0.24px;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      /* Error Messages */
+      .error-message {
+        background: var(--error-soft);
+        border-left: 3px solid var(--error);
+        padding: 12px 16px;
+        margin: 12px 0;
+        font-size: 15px;
+        color: var(--error);
+        border-radius: 8px;
+        line-height: 1.47;
+        letter-spacing: -0.24px;
       }
 
       .error-words {
-        color: #e74c3c;
-        font-weight: 500;
+        font-weight: 600;
       }
 
+      /* Poem Display */
       .poem-display {
-        background: #f8f9fa;
-        border-left: 4px solid #3498db;
-        padding: 2rem;
-        margin: 2rem 0;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
         white-space: pre-wrap;
-        font-size: 1.1rem;
-        line-height: 1.8;
-        color: #2c3e50;
+        font-size: 17px;
+        line-height: 1.7;
+        color: var(--ink);
+        border: 0.5px solid rgba(0, 0, 0, 0.08);
+        min-height: 240px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        letter-spacing: -0.4px;
       }
 
-      .loading {
-        text-align: center;
-        color: #7f8c8d;
+      /* Buttons - iOS native button styling */
+      .button-container {
+        padding: 16px max(20px, var(--safe-left))
+          calc(var(--safe-bottom) + 16px) max(20px, var(--safe-right));
+        background: linear-gradient(to top, var(--paper) 85%, transparent);
+        flex-shrink: 0;
+      }
+
+      button {
+        width: 100%;
+        padding: 15px;
+        border: none;
+        border-radius: 12px;
+        font-size: 17px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s var(--gentle-ease);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          sans-serif;
+        letter-spacing: -0.4px;
+        min-height: 50px; /* iOS 50pt touch target for primary actions */
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: white;
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+      }
+
+      button.primary:active {
+        transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
+        opacity: 0.9;
+      }
+
+      button.primary:disabled {
+        background: rgba(0, 0, 0, 0.08);
+        color: rgba(0, 0, 0, 0.3);
+        box-shadow: none;
+        cursor: not-allowed;
+      }
+
+      button.secondary {
+        background: white;
+        color: var(--ink);
+        border: 0.5px solid rgba(0, 0, 0, 0.1);
+        margin-top: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+
+      button.secondary:active {
+        transform: scale(0.98);
+        background: var(--paper-warm);
+        opacity: 0.9;
+      }
+
+      /* Tip */
+      .tip {
+        font-size: 15px;
+        color: var(--ink-whisper);
         font-style: italic;
-        margin: 1rem 0;
-      }
-
-      .button-group {
+        margin-bottom: 16px;
         display: flex;
-        gap: 1rem;
-        margin-top: 1rem;
+        align-items: center;
+        gap: 8px;
+        letter-spacing: -0.24px;
       }
 
-      .button-group button.secondary {
-        background: #95a5a6;
+      /* Desktop Responsiveness */
+      @media (min-width: 640px) {
+        .app {
+          max-width: 540px;
+          margin: 0 auto;
+          box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+        }
       }
 
-      .button-group button.secondary:hover {
-        background: #7f8c8d;
+      /* Smooth Scrolling - hide scrollbar but keep functionality */
+      .word-bank-scroll::-webkit-scrollbar,
+      .step-content::-webkit-scrollbar {
+        display: none;
       }
 
-      .emotion-pinned {
-        background: #f8f9fa;
-        border-left: 3px solid #3498db;
-        padding: 1rem 1.5rem;
-        margin-bottom: 2rem;
-        border-radius: 4px;
-        font-size: 0.95rem;
-        color: #555;
-        font-style: italic;
-      }
-
-      .emotion-pinned strong {
-        color: #2c3e50;
-        font-style: normal;
-        font-weight: 500;
+      .word-bank-scroll,
+      .step-content {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>🌸 RITA POEM CHALLENGE 🌸</h1>
-      <p class="subtitle">A creative constraint tool for poetic expression</p>
-
-      <!-- Step 1: Emotion Input -->
-      <div class="step active" id="step1">
-        <label for="emotion"
-          >✨ Describe an emotion that's been feeling alive for you
-          lately:</label
-        >
-        <input
-          type="text"
-          id="emotion"
-          placeholder="e.g., a quiet longing for something undefined"
-        />
-        <button onclick="generateWordBanks()">Continue</button>
+    <div class="app">
+      <div class="header">
+        <h1>Rita</h1>
+        <div class="step-indicator" id="stepIndicator">Begin</div>
       </div>
 
-      <!-- Step 2: Word Bank Selection -->
-      <div class="step" id="step2">
-        <div class="emotion-pinned" id="emotionDisplay2" style="display: none">
-          <strong>Your emotion:</strong> <span id="emotionText2"></span>
+      <div class="flow-container">
+        <!-- Step 1: Emotion Input -->
+        <div class="flow-step active" id="step1">
+          <div class="step-content">
+            <div class="prompt prompt-lg">
+              What emotion has been feeling alive for you lately?
+            </div>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                id="emotion"
+                placeholder="a quiet longing for something undefined..."
+                autocomplete="off"
+                autocapitalize="sentences"
+              />
+            </div>
+          </div>
+          <div class="button-container">
+            <button class="primary" onclick="generateWordBanks()">
+              Continue
+            </button>
+          </div>
         </div>
-        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
-          Choose Your Word Bank (25 Words)
-        </h2>
-        <div class="loading" id="loading">
-          Rita is weaving three word bank options...
-        </div>
-        <div class="word-banks" id="wordBanks"></div>
-        <button onclick="selectWordBank()" id="selectBtn" disabled>
-          Continue with Selected Bank
-        </button>
-      </div>
 
-      <!-- Step 3: Selected Bank Display -->
-      <div class="step" id="step3">
-        <div class="emotion-pinned" id="emotionDisplay3" style="display: none">
-          <strong>Your emotion:</strong> <span id="emotionText3"></span>
+        <!-- Step 2: Word Bank Selection -->
+        <div class="flow-step" id="step2">
+          <div class="step-content">
+            <div
+              class="emotion-whisper"
+              id="emotionDisplay2"
+              style="display: none"
+            >
+              <strong>Feeling:</strong> <span id="emotionText2"></span>
+            </div>
+            <div class="prompt">Choose the word bank that feels right</div>
+            <div class="loading" id="loading">Weaving word banks...</div>
+            <div class="word-bank-scroll" id="wordBanks"></div>
+          </div>
+          <div class="button-container">
+            <button
+              class="primary"
+              id="selectBtn"
+              disabled
+              onclick="selectWordBank()"
+            >
+              Continue
+            </button>
+          </div>
         </div>
-        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
-          Your Word Bank
-        </h2>
-        <div class="selected-bank" id="selectedBankDisplay"></div>
-        <p style="color: #7f8c8d; margin-bottom: 1rem; font-size: 0.9rem">
-          💡 Tip: Use only these words to write your poem!
-        </p>
-        <label for="poem">✍️ Write your poem using only the words above:</label>
-        <textarea id="poem" placeholder="Write your poem here..."></textarea>
-        <div id="poemError" class="error"></div>
-        <button onclick="validateAndShowPoem()">Submit Poem</button>
-      </div>
 
-      <!-- Step 4: Final Poem Display -->
-      <div class="step" id="step4">
-        <div class="emotion-pinned" id="emotionDisplay4" style="display: none">
-          <strong>Your emotion:</strong> <span id="emotionText4"></span>
+        <!-- Step 3: Write Poem -->
+        <div class="flow-step" id="step3">
+          <div class="step-content">
+            <div
+              class="emotion-whisper"
+              id="emotionDisplay3"
+              style="display: none"
+            >
+              <strong>Feeling:</strong> <span id="emotionText3"></span>
+            </div>
+            <div class="selected-bank" id="selectedBankDisplay"></div>
+            <div class="tip">💡 Use only these words</div>
+            <div
+              class="input-wrapper"
+              style="flex: 1; display: flex; flex-direction: column"
+            >
+              <textarea
+                id="poem"
+                placeholder="Write what wants to be written..."
+                autocomplete="off"
+                autocapitalize="sentences"
+              ></textarea>
+            </div>
+            <div id="poemError"></div>
+          </div>
+          <div class="button-container">
+            <button class="primary" onclick="validateAndShowPoem()">
+              Complete
+            </button>
+          </div>
         </div>
-        <h2 style="margin-bottom: 1rem; color: #2c3e50; font-weight: 300">
-          Your Poem
-        </h2>
-        <div class="poem-display" id="poemDisplay"></div>
-        <div class="button-group">
-          <button onclick="createAnother()">Create Another Poem</button>
-          <button class="secondary" onclick="window.location.reload()">
-            Start Over
-          </button>
+
+        <!-- Step 4: Poem Display -->
+        <div class="flow-step" id="step4">
+          <div class="step-content">
+            <div
+              class="emotion-whisper"
+              id="emotionDisplay4"
+              style="display: none"
+            >
+              <strong>Feeling:</strong> <span id="emotionText4"></span>
+            </div>
+            <div class="poem-display" id="poemDisplay"></div>
+          </div>
+          <div class="button-container">
+            <button class="primary" onclick="createAnother()">
+              Create Another
+            </button>
+            <button class="secondary" onclick="window.location.reload()">
+              Start Fresh
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -303,44 +594,45 @@
       let selectedBankIndex = -1;
       let selectedWordBank = [];
       let currentEmotion = "";
+      let currentStep = 1;
+
+      const stepLabels = ["Begin", "Choose Words", "Write", "Complete"];
 
       function showStep(stepNumber) {
-        document.querySelectorAll(".step").forEach((step) => {
-          step.classList.remove("active");
-        });
-        document.getElementById(`step${stepNumber}`).classList.add("active");
+        const steps = document.querySelectorAll(".flow-step");
+        const currentStepEl = steps[currentStep - 1];
+        const nextStepEl = steps[stepNumber - 1];
+
+        if (currentStepEl) {
+          currentStepEl.classList.add("exiting");
+          setTimeout(() => {
+            currentStepEl.classList.remove("active", "exiting");
+          }, 300);
+        }
+
+        setTimeout(() => {
+          nextStepEl.classList.add("active");
+          currentStep = stepNumber;
+          document.getElementById("stepIndicator").textContent =
+            stepLabels[stepNumber - 1] || "";
+        }, 150);
       }
 
       function generateBasicWords() {
-        // Generate basic building blocks dynamically using RiTa randomWord with Penn POS tags
         const basicWords = new Set();
-
-        // Define POS tag categories based on Penn tag set (from https://rednoise.org/rita/reference/postags.html)
-        // Map of category names to their Penn POS tags
         const posCategories = {
-          // Pronouns (prp: Personal pronoun, prp$: Possessive pronoun)
           pronouns: ["prp", "prp$"],
-          // Coordinating conjunctions (cc)
           conjunctions: ["cc"],
-          // Determiners (dt: Determiner, pdt: Predeterminer)
           determiners: ["dt", "pdt"],
-          // Prepositions (in: Preposition or subordinating conjunction)
           prepositions: ["in"],
-          // Common verbs (vb: base, vbd: past, vbg: gerund, vbn: past participle, vbp: non-3rd person present, vbz: 3rd person present)
           verbs: ["vb", "vbd", "vbg", "vbn", "vbp", "vbz"],
-          // Wh-words (wdt: Wh-determiner, wp: Wh-pronoun, wp$: Possessive wh-pronoun, wrb: Wh-adverb)
           whWords: ["wdt", "wp", "wp$", "wrb"],
-          // Adverbs (rb: Adverb)
           adverbs: ["rb"],
-          // Modal verbs (md: Modal)
           modals: ["md"],
-          // Particles (rp: Particle)
           particles: ["rp"],
-          // To (to: to)
           to: ["to"],
         };
 
-        // Generate at least one word for each category
         Object.keys(posCategories).forEach((category) => {
           posCategories[category].forEach((pos) => {
             try {
@@ -348,14 +640,10 @@
               if (word && word.length > 0) {
                 basicWords.add(word.toLowerCase());
               }
-            } catch (e) {
-              // Skip if word generation fails for this POS
-            }
+            } catch (e) {}
           });
         });
 
-        // Generate additional words for important categories to ensure variety
-        // Important categories that need multiple examples
         const importantCategories = {
           pronouns: ["prp", "prp$"],
           conjunctions: ["cc"],
@@ -365,9 +653,8 @@
           whWords: ["wdt", "wp", "wrb"],
         };
 
-        // Generate 2-3 additional words per important category
         Object.keys(importantCategories).forEach((category) => {
-          const attempts = 3; // Try up to 3 times per category
+          const attempts = 3;
           for (let i = 0; i < attempts; i++) {
             const posArray = importantCategories[category];
             const randomPos =
@@ -377,25 +664,20 @@
               if (word && word.length > 0) {
                 basicWords.add(word.toLowerCase());
               }
-            } catch (e) {
-              // Skip if word generation fails
-            }
+            } catch (e) {}
           }
         });
 
-        // If we still don't have enough words, try some fallback POS tags
         if (basicWords.size < 10) {
           const fallbackPos = ["dt", "prp", "cc", "in", "vb", "rb"];
           fallbackPos.forEach((pos) => {
-            if (basicWords.size >= 15) return; // Stop if we have enough
+            if (basicWords.size >= 15) return;
             try {
               const word = RiTa.randomWord({ pos });
               if (word && word.length > 0) {
                 basicWords.add(word.toLowerCase());
               }
-            } catch (e) {
-              // Skip if word generation fails
-            }
+            } catch (e) {}
           });
         }
 
@@ -403,9 +685,7 @@
       }
 
       function generateWordBank(emotionText) {
-        // Generate basic building blocks dynamically
         const basicWords = generateBasicWords();
-
         const words = RiTa.tokenize(emotionText);
         const poses = RiTa.pos(emotionText);
 
@@ -423,10 +703,9 @@
         const wordBank = new Set();
         const posTypes = ["nn", "jj", "vb", "rb", "prp", "dt"];
 
-        // Add some basic words first (randomly select 8-10 from the basic words list)
         const shuffledBasic = [...basicWords].sort(() => Math.random() - 0.5);
         const basicCount = Math.min(
-          Math.floor(Math.random() * 3) + 8, // 8-10 basic words (or available amount)
+          Math.floor(Math.random() * 3) + 8,
           shuffledBasic.length,
           25 - wordBank.size
         );
@@ -436,7 +715,6 @@
           }
         }
 
-        // Then add words based on emotion's POS tags
         uniquePOS.forEach((pos) => {
           if (wordBank.size < 25) {
             try {
@@ -444,13 +722,10 @@
               if (word && word.length > 0) {
                 wordBank.add(word.toLowerCase());
               }
-            } catch (e) {
-              // Skip if word generation fails
-            }
+            } catch (e) {}
           }
         });
 
-        // Fill remaining slots with random words
         while (wordBank.size < 25) {
           try {
             const randomPos =
@@ -471,7 +746,6 @@
                 wordBank.add(word.toLowerCase());
               }
             } catch (e2) {
-              // If still not enough, add more basic words
               const remainingBasic = shuffledBasic.filter(
                 (w) => !wordBank.has(w)
               );
@@ -490,7 +764,6 @@
 
       function updateEmotionDisplay(emotion) {
         currentEmotion = emotion;
-        // Update all emotion displays
         for (let i = 2; i <= 4; i++) {
           const display = document.getElementById(`emotionDisplay${i}`);
           const text = document.getElementById(`emotionText${i}`);
@@ -505,7 +778,6 @@
         const emotion = document.getElementById("emotion").value.trim();
 
         if (!emotion || emotion.length < 3) {
-          alert("Please describe your emotion (at least 3 characters)");
           return;
         }
 
@@ -514,13 +786,11 @@
         document.getElementById("loading").style.display = "block";
         document.getElementById("wordBanks").innerHTML = "";
 
-        // Generate 3 word banks
         wordBanks = [];
         for (let i = 0; i < 3; i++) {
           wordBanks.push(generateWordBank(emotion));
         }
 
-        // Display word banks
         setTimeout(() => {
           document.getElementById("loading").style.display = "none";
           const container = document.getElementById("wordBanks");
@@ -547,13 +817,12 @@
 
             container.appendChild(option);
           });
-        }, 500);
+        }, 600);
       }
 
       function selectBankOption(index) {
         selectedBankIndex = index;
 
-        // Update UI
         document.querySelectorAll(".word-bank-option").forEach((opt, i) => {
           if (i === index) {
             opt.classList.add("selected");
@@ -566,15 +835,11 @@
       }
 
       function selectWordBank() {
-        if (selectedBankIndex === -1) {
-          alert("Please select a word bank");
-          return;
-        }
+        if (selectedBankIndex === -1) return;
 
         selectedWordBank = wordBanks[selectedBankIndex];
         showStep(3);
 
-        // Display selected bank
         const display = document.getElementById("selectedBankDisplay");
         display.innerHTML = "";
 
@@ -609,47 +874,54 @@
         const errorDiv = document.getElementById("poemError");
 
         if (!poem || poem.length < 5) {
-          errorDiv.textContent = "Please write a poem (at least 5 characters)";
+          errorDiv.innerHTML =
+            '<div class="error-message">Write a few words first</div>';
           return;
         }
 
         const validation = validatePoem(poem, selectedWordBank);
 
         if (validation.valid) {
-          errorDiv.textContent = "";
+          errorDiv.innerHTML = "";
           document.getElementById("poemDisplay").textContent = poem;
           showStep(4);
         } else {
-          errorDiv.innerHTML = `⚠️ Invalid words detected: <span class="error-words">${validation.invalidWords.join(
+          errorDiv.innerHTML = `<div class="error-message">Words not in your bank: <span class="error-words">${validation.invalidWords.join(
             ", "
-          )}</span><br>Please use only words from your word bank.`;
+          )}</span></div>`;
         }
       }
 
       function createAnother() {
-        // Reset to step 1
-        document.getElementById("emotion").value = "";
         document.getElementById("poem").value = "";
-        document.getElementById("poemError").textContent = "";
+        document.getElementById("poemError").innerHTML = "";
         selectedBankIndex = -1;
         selectedWordBank = [];
         wordBanks = [];
-        currentEmotion = "";
-        // Hide emotion displays
+
         for (let i = 2; i <= 4; i++) {
           const display = document.getElementById(`emotionDisplay${i}`);
           if (display) {
             display.style.display = "none";
           }
         }
-        showStep(1);
+
+        showStep(3);
       }
 
-      // Allow Enter key to submit in emotion input
+      // Enter key handling
       document.getElementById("emotion").addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
+          e.preventDefault();
           generateWordBanks();
         }
+      });
+
+      // Auto-resize textarea
+      const textarea = document.getElementById("poem");
+      textarea.addEventListener("input", function () {
+        this.style.height = "auto";
+        this.style.height = this.scrollHeight + "px";
       });
     </script>
   </body>
